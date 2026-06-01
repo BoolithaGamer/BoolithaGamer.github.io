@@ -1,1 +1,784 @@
 # BoolithaGamer.github.io
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planr — AI Assignment Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Epilogue:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:      #0d0d14;
+  --ink2:     #1e1e2e;
+  --surface:  #15151f;
+  --card:     #1c1c2a;
+  --border:   #2a2a3e;
+  --accent:   #6c63ff;
+  --accent2:  #ff6584;
+  --teal:     #00d4aa;
+  --gold:     #f5c842;
+  --text:     #e8e8f0;
+  --muted:    #8888a8;
+  --radius:   12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Epilogue',sans-serif;background:var(--ink);color:var(--text);overflow-x:hidden}
+
+/* custom cursor — desktop only */
+#cursor,#cursor-ring{display:none}
+@media(pointer:fine){
+  body{cursor:none}
+  #cursor{display:block;position:fixed;width:12px;height:12px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform 0.1s,background 0.2s;mix-blend-mode:screen}
+  #cursor-ring{display:block;position:fixed;width:36px;height:36px;border:1.5px solid rgba(108,99,255,0.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left 0.12s ease,top 0.12s ease,transform 0.2s}
+}
+
+/* noise texture overlay */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(13,13,20,0.92);backdrop-filter:blur(16px);gap:1rem}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-0.02em;color:var(--text);flex-shrink:0}
+.logo span{color:var(--accent)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:0.85rem;letter-spacing:0.04em;transition:color 0.2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.05em;text-transform:uppercase;padding:0.55rem 1.2rem;border-radius:6px;text-decoration:none;transition:background 0.2s,transform 0.2s;border:none;cursor:pointer;flex-shrink:0;white-space:nowrap}
+.nav-cta:hover{background:#7c75ff;transform:translateY(-1px)}
+
+/* hamburger */
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none;flex-shrink:0}
+.hamburger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+/* mobile drawer */
+.mobile-menu{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(13,13,20,0.98);backdrop-filter:blur(20px);z-index:99;flex-direction:column;align-items:center;justify-content:center;gap:2rem}
+.mobile-menu.open{display:flex}
+.mobile-menu a,.mobile-menu button{color:var(--text);text-decoration:none;font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;letter-spacing:-0.01em;background:none;border:none;cursor:pointer;transition:color 0.2s}
+.mobile-menu a:hover,.mobile-menu button:hover{color:var(--accent)}
+.mobile-menu .mob-cta{margin-top:1rem;background:var(--accent);padding:0.8rem 2.5rem;border-radius:8px;font-size:1rem}
+.mob-close{position:absolute;top:1.2rem;right:1.5rem;font-size:1.8rem;background:none;border:none;color:var(--muted);cursor:pointer}
+
+/* ── HERO ── */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:7rem 1.5rem 4rem;text-align:center;overflow:hidden}
+.hero-glow{position:absolute;width:min(700px,150vw);height:min(700px,150vw);border-radius:50%;background:radial-gradient(circle,rgba(108,99,255,0.18) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;animation:pulse 6s ease-in-out infinite}
+.hero-glow2{position:absolute;width:min(400px,80vw);height:min(400px,80vw);border-radius:50%;background:radial-gradient(circle,rgba(0,212,170,0.1) 0%,transparent 70%);top:30%;right:10%;pointer-events:none;animation:pulse 8s 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.15)}}
+.hero-inner{position:relative;z-index:2;max-width:860px;width:100%}
+.hero-chip{display:inline-flex;align-items:center;gap:0.5rem;border:1px solid var(--border);background:rgba(108,99,255,0.08);color:var(--accent);font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.4rem 1rem;border-radius:2rem;margin-bottom:1.5rem;animation:fadeUp 0.7s ease both}
+.hero-chip::before{content:'✦';font-size:0.6rem}
+h1{font-family:'Syne',sans-serif;font-size:clamp(2.4rem,8vw,5.5rem);font-weight:800;line-height:1.05;letter-spacing:-0.03em;margin-bottom:1.2rem;animation:fadeUp 0.7s 0.1s ease both}
+h1 .line2{display:block;background:linear-gradient(90deg,var(--accent),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(0.9rem,2.5vw,1.1rem);color:var(--muted);line-height:1.75;max-width:560px;margin:0 auto 2.2rem;font-weight:300;animation:fadeUp 0.7s 0.2s ease both;padding:0 0.5rem}
+.hero-btns{display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;animation:fadeUp 0.7s 0.3s ease both}
+.btn-main{background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;letter-spacing:0.04em;padding:0.85rem 1.8rem;border-radius:8px;text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;white-space:nowrap}
+.btn-main::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);opacity:0;transition:opacity 0.2s}
+.btn-main:hover::after{opacity:1}
+.btn-main:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(108,99,255,0.4)}
+.btn-ghost{background:transparent;color:var(--text);font-family:'Syne',sans-serif;font-weight:600;font-size:0.88rem;letter-spacing:0.04em;padding:0.85rem 1.8rem;border-radius:8px;text-decoration:none;border:1px solid var(--border);cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.hero-visual{margin-top:3rem;animation:fadeUp 0.7s 0.45s ease both;position:relative;z-index:2}
+
+/* fake dashboard card */
+.dash-preview{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1rem;max-width:680px;margin:0 auto;text-align:left;box-shadow:0 40px 80px rgba(0,0,0,0.5)}
+.dash-bar{display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+.dash-title{font-family:'Syne',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:0.3rem}
+.assign-list{display:flex;flex-direction:column;gap:0.6rem}
+.assign-item{display:flex;align-items:center;gap:0.7rem;background:var(--surface);border-radius:8px;padding:0.65rem 0.75rem;flex-wrap:wrap}
+.assign-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.assign-name{font-size:0.82rem;font-weight:500;flex:1;min-width:120px}
+.assign-due{font-size:0.7rem;color:var(--muted);white-space:nowrap}
+.assign-tag{font-size:0.65rem;font-weight:600;padding:0.18rem 0.5rem;border-radius:4px;letter-spacing:0.05em;white-space:nowrap}
+.tag-urgent{background:rgba(255,101,132,0.15);color:var(--accent2)}
+.tag-soon{background:rgba(245,200,66,0.15);color:var(--gold)}
+.tag-ok{background:rgba(0,212,170,0.15);color:var(--teal)}
+.progress-row{display:flex;align-items:center;gap:0.8rem;margin-top:0.8rem;padding:0.65rem 0.75rem;background:var(--surface);border-radius:8px}
+.progress-label{font-size:0.75rem;color:var(--muted);flex-shrink:0;white-space:nowrap}
+.progress-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:40px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--teal));border-radius:3px;animation:fillBar 2s 1s ease both}
+@keyframes fillBar{from{width:0}to{width:68%}}
+.progress-pct{font-size:0.75rem;font-weight:600;color:var(--teal);flex-shrink:0}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── FEATURES ── */
+#features{padding:5rem 1.5rem;position:relative;z-index:1}
+.feat-header{text-align:center;margin-bottom:3rem}
+.feat-header .tag{display:inline-block;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:0.8rem}
+.feat-header h2{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,4vw,3rem);font-weight:800;letter-spacing:-0.02em}
+.feat-header p{color:var(--muted);margin-top:0.8rem;font-size:0.92rem;line-height:1.7}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;max-width:1100px;margin:0 auto}
+.feat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;transition:transform 0.25s,border-color 0.25s,box-shadow 0.25s;position:relative;overflow:hidden}
+.feat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(108,99,255,0.06),transparent);opacity:0;transition:opacity 0.3s}
+.feat-card:hover{transform:translateY(-6px);border-color:rgba(108,99,255,0.4);box-shadow:0 20px 48px rgba(0,0,0,0.3)}
+.feat-card:hover::before{opacity:1}
+.feat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:1rem;flex-shrink:0}
+.fi-purple{background:rgba(108,99,255,0.15)}
+.fi-teal{background:rgba(0,212,170,0.12)}
+.fi-pink{background:rgba(255,101,132,0.12)}
+.fi-gold{background:rgba(245,200,66,0.12)}
+.fi-blue{background:rgba(56,189,248,0.12)}
+.fi-green{background:rgba(74,222,128,0.12)}
+.feat-card h3{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;margin-bottom:0.5rem}
+.feat-card p{font-size:0.85rem;color:var(--muted);line-height:1.65}
+
+/* ── HOW IT WORKS ── */
+#how{padding:5rem 1.5rem;background:var(--ink2);position:relative;z-index:1}
+.how-inner{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.how-steps{display:flex;flex-direction:column;gap:0}
+.how-step{display:flex;gap:1.4rem;padding:1.5rem 0;border-bottom:1px solid var(--border);position:relative}
+.how-step:last-child{border-bottom:none}
+.step-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--border);line-height:1;flex-shrink:0;width:48px;transition:color 0.3s}
+.how-step:hover .step-num{color:var(--accent)}
+.step-body h4{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem}
+.step-body p{font-size:0.87rem;color:var(--muted);line-height:1.65}
+.how-visual{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.schedule-block{display:flex;flex-direction:column;gap:0.5rem}
+.sch-day{font-family:'Syne',sans-serif;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-top:0.8rem;padding-bottom:0.3rem;border-bottom:1px solid var(--border)}
+.sch-item{display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0.7rem;border-radius:6px;background:var(--surface)}
+.sch-time{font-size:0.7rem;color:var(--muted);width:52px;flex-shrink:0}
+.sch-task{font-size:0.8rem;flex:1}
+.sch-bar{width:30px;height:4px;border-radius:2px;flex-shrink:0}
+
+/* ── PRICING ── */
+#pricing{padding:5rem 1.5rem;position:relative;z-index:1}
+.pricing-header{text-align:center;margin-bottom:3rem}
+.pricing-header .tag{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:0.8rem}
+.pricing-header h2{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,4vw,3rem);font-weight:800;letter-spacing:-0.02em}
+.pricing-header p{color:var(--muted);margin-top:0.8rem;font-size:0.92rem}
+.toggle-wrap{display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:2.5rem;flex-wrap:wrap}
+.toggle-label{font-size:0.85rem;color:var(--muted)}
+.toggle-label.active{color:var(--text);font-weight:500}
+.toggle{position:relative;width:52px;height:28px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:14px;transition:background 0.3s}
+.toggle-slider::before{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform 0.3s}
+.toggle input:checked + .toggle-slider{background:var(--accent)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(24px)}
+.save-badge{font-size:0.72rem;background:rgba(0,212,170,0.15);color:var(--teal);padding:0.25rem 0.6rem;border-radius:4px;letter-spacing:0.04em}
+.plans-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:800px;margin:0 auto}
+.plan-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.2rem;position:relative;transition:transform 0.2s,box-shadow 0.2s}
+.plan-card.featured{border-color:var(--accent);background:linear-gradient(145deg,rgba(108,99,255,0.08),var(--card))}
+.plan-card.featured::before{content:'MOST POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;padding:0.3rem 1rem;border-radius:4px;white-space:nowrap}
+.plan-card:hover{transform:translateY(-4px);box-shadow:0 20px 48px rgba(0,0,0,0.3)}
+.plan-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.plan-price{display:flex;align-items:flex-end;gap:0.3rem;margin-bottom:0.4rem;flex-wrap:wrap}
+.price-amount{font-family:'Syne',sans-serif;font-size:clamp(2.2rem,5vw,3.2rem);font-weight:800;line-height:1;letter-spacing:-0.03em}
+.price-period{font-size:0.85rem;color:var(--muted);padding-bottom:0.4rem}
+.price-sub{font-size:0.75rem;color:var(--muted);margin-bottom:1.6rem;line-height:1.5}
+.plan-divider{height:1px;background:var(--border);margin:1.2rem 0}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.8rem}
+.plan-features li{display:flex;align-items:center;gap:0.7rem;font-size:0.85rem;color:var(--muted)}
+.plan-features li::before{content:'✓';color:var(--teal);font-weight:700;flex-shrink:0}
+.plan-features li.no{color:rgba(136,136,168,0.4)}
+.plan-features li.no::before{content:'×';color:rgba(136,136,168,0.3)}
+.btn-plan{width:100%;padding:0.85rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.05em;cursor:pointer;border:none;transition:all 0.2s}
+.btn-plan.primary{background:var(--accent);color:#fff}
+.btn-plan.primary:hover{background:#7c75ff;box-shadow:0 8px 24px rgba(108,99,255,0.4)}
+.btn-plan.outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-plan.outline:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── PAYWALL MODAL ── */
+#paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:1rem}
+#paywall-overlay.show{display:flex}
+.paywall-modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2.4rem 1.8rem;max-width:480px;width:100%;text-align:center;animation:popIn 0.35s ease both;max-height:90vh;overflow-y:auto}
+@keyframes popIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+.pw-lock{font-size:2.5rem;margin-bottom:0.8rem}
+.paywall-modal h2{font-family:'Syne',sans-serif;font-size:clamp(1.3rem,4vw,1.6rem);font-weight:800;margin-bottom:0.6rem}
+.paywall-modal p{color:var(--muted);font-size:0.88rem;line-height:1.65;margin-bottom:1.5rem}
+.pw-plans{display:flex;gap:0.8rem;margin-bottom:1.2rem}
+.pw-plan{flex:1;border:1px solid var(--border);border-radius:10px;padding:1rem 0.8rem;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+.pw-plan.selected,.pw-plan:hover{border-color:var(--accent);background:rgba(108,99,255,0.08)}
+.pw-plan-name{font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem}
+.pw-plan-price{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+.pw-plan-sub{font-size:0.68rem;color:var(--muted)}
+.pw-plan .save{font-size:0.62rem;background:rgba(0,212,170,0.15);color:var(--teal);padding:0.15rem 0.5rem;border-radius:3px;margin-top:0.3rem;display:inline-block}
+.btn-pw-cta{width:100%;padding:0.95rem 1rem;background:linear-gradient(135deg,var(--accent),#9c95ff);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;border:none;border-radius:10px;cursor:pointer;transition:opacity 0.2s,transform 0.2s;margin-bottom:0.8rem;line-height:1.3}
+.btn-pw-cta:hover{opacity:0.9;transform:translateY(-1px)}
+.pw-close{background:none;border:none;color:var(--muted);font-size:0.8rem;cursor:pointer;text-decoration:underline}
+.pw-secure{display:flex;align-items:center;justify-content:center;gap:0.4rem;font-size:0.72rem;color:var(--muted);margin-top:0.8rem}
+
+/* ── APP SECTION (locked) ── */
+#app{padding:4rem 1.5rem;position:relative;z-index:1}
+.app-wrapper{max-width:1000px;margin:0 auto;position:relative}
+.app-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.app-header h2{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800}
+.locked-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 0%,rgba(13,13,20,0.97) 35%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:2.5rem;border-radius:16px;z-index:10}
+.lock-msg{text-align:center;padding:0 1rem}
+.lock-msg .lock-icon{font-size:2.2rem;margin-bottom:0.6rem}
+.lock-msg h3{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:0.4rem}
+.lock-msg p{color:var(--muted);font-size:0.85rem;margin-bottom:1.2rem;line-height:1.5}
+.app-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:1.2rem}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.3rem;filter:blur(2px);pointer-events:none;user-select:none}
+.panel-title{font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.fake-input{background:var(--surface);border:1px solid var(--border);border-radius:6px;height:36px;margin-bottom:0.7rem}
+.fake-btn{background:var(--accent);border-radius:6px;height:36px;opacity:0.6;margin-top:0.3rem}
+.fake-list{display:flex;flex-direction:column;gap:0.5rem}
+.fake-item{background:var(--surface);border-radius:6px;height:48px;border-left:3px solid}
+.fake-item.c1{border-color:var(--accent2)}
+.fake-item.c2{border-color:var(--gold)}
+.fake-item.c3{border-color:var(--teal)}
+.fake-item.c4{border-color:var(--accent)}
+.fake-schedule{display:flex;flex-direction:column;gap:0.5rem}
+.fake-day-hdr{height:16px;background:var(--border);border-radius:3px;width:55px}
+.fake-time-item{background:var(--surface);border-radius:6px;height:38px}
+
+/* ── TESTIMONIALS ── */
+#testimonials{padding:5rem 1.5rem;background:var(--ink2);position:relative;z-index:1}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;max-width:1100px;margin:2rem auto 0}
+.testi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem}
+.stars{color:var(--gold);font-size:0.85rem;margin-bottom:0.8rem;letter-spacing:0.15em}
+.testi-card blockquote{font-size:0.87rem;color:var(--muted);line-height:1.7;font-style:italic;margin-bottom:1rem}
+.testi-author{display:flex;align-items:center;gap:0.8rem}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0}
+.av1{background:rgba(108,99,255,0.2);color:var(--accent)}
+.av2{background:rgba(0,212,170,0.2);color:var(--teal)}
+.av3{background:rgba(255,101,132,0.2);color:var(--accent2)}
+.testi-name{font-size:0.85rem;font-weight:500}
+.testi-role{font-size:0.73rem;color:var(--muted)}
+
+/* ── FAQ ── */
+#faq{padding:5rem 1.5rem;position:relative;z-index:1}
+.faq-inner{max-width:680px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border);padding:1.2rem 0}
+.faq-q{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:'Syne',sans-serif;font-size:0.92rem;font-weight:600;gap:1rem;-webkit-tap-highlight-color:transparent}
+.faq-icon{font-size:1.2rem;color:var(--accent);transition:transform 0.3s;flex-shrink:0}
+.faq-a{font-size:0.87rem;color:var(--muted);line-height:1.7;max-height:0;overflow:hidden;transition:max-height 0.35s ease,padding 0.3s}
+.faq-item.open .faq-icon{transform:rotate(45deg)}
+.faq-item.open .faq-a{max-height:300px;padding-top:0.8rem}
+
+/* ── FOOTER ── */
+footer{background:var(--ink);border-top:1px solid var(--border);padding:2.5rem 1.5rem;text-align:center;position:relative;z-index:1}
+footer .foot-logo{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;margin-bottom:0.6rem}
+footer .foot-logo span{color:var(--accent)}
+footer p{font-size:0.8rem;color:var(--muted)}
+
+/* ── SECTION SHARED ── */
+.sec-tag{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:0.8rem}
+.sec-h2{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,4vw,2.8rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:0.8rem}
+.sec-sub{color:var(--muted);font-size:0.92rem;line-height:1.7}
+.center{text-align:center}
+
+/* ── RESPONSIVE ── */
+
+/* Tablet: 2-col features, adjust paddings */
+@media(max-width:900px){
+  nav{padding:1rem 1.5rem}
+  .features-grid{grid-template-columns:repeat(2,1fr)}
+  .how-inner{grid-template-columns:1fr;gap:2.5rem}
+  .how-visual{max-width:520px}
+  .plans-grid{grid-template-columns:1fr;max-width:440px}
+  .plan-card.featured{margin-top:1rem}
+  .testi-grid{grid-template-columns:repeat(2,1fr)}
+  .app-grid{grid-template-columns:1fr}
+}
+
+/* Mobile: single column everything */
+@media(max-width:640px){
+  nav{padding:0.9rem 1.2rem}
+  .nav-links{display:none}
+  .nav-cta{display:none}
+  .hamburger{display:flex}
+
+  #hero{padding:5.5rem 1.2rem 3rem}
+  .hero-btns{flex-direction:column;align-items:center}
+  .btn-main,.btn-ghost{width:100%;max-width:280px;text-align:center}
+
+  .features-grid{grid-template-columns:1fr}
+
+  .how-inner{grid-template-columns:1fr;gap:2rem}
+
+  .plans-grid{grid-template-columns:1fr;max-width:100%}
+  .plan-card.featured{margin-top:1rem}
+
+  .pw-plans{flex-direction:column}
+  .paywall-modal{padding:1.8rem 1.2rem}
+
+  .testi-grid{grid-template-columns:1fr}
+
+  .app-grid{grid-template-columns:1fr}
+  .locked-overlay{padding-bottom:2rem}
+
+  .toggle-wrap{gap:0.7rem}
+
+  /* schedule items wrap nicely on small screens */
+  .sch-task{font-size:0.75rem}
+  .sch-time{width:44px;font-size:0.65rem}
+  .sch-bar{width:20px}
+
+  /* dashboard preview adjustments */
+  .assign-item{gap:0.5rem}
+  .assign-name{font-size:0.78rem;min-width:90px}
+  .assign-due{display:none} /* hide on very small to prevent overflow */
+  .dash-title{display:none}
+}
+
+/* Very small screens (320px) */
+@media(max-width:360px){
+  .pw-plan-price{font-size:1.3rem}
+  h1{font-size:2rem}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Planr<span>.</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <button class="nav-cta" onclick="openPaywall()">Get Started Free</button>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobile-menu">
+  <button class="mob-close" onclick="toggleMenu()">✕</button>
+  <a href="#features" onclick="toggleMenu()">Features</a>
+  <a href="#how" onclick="toggleMenu()">How It Works</a>
+  <a href="#pricing" onclick="toggleMenu()">Pricing</a>
+  <a href="#faq" onclick="toggleMenu()">FAQ</a>
+  <button class="mob-cta" onclick="toggleMenu();openPaywall()">Get Started Free</button>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-inner">
+    <div class="hero-chip">AI-Powered Study Planner</div>
+    <h1>Never Miss a Deadline<br><span class="line2">Again.</span></h1>
+    <p class="hero-sub">Planr tracks your assignments, predicts crunch points, and auto-generates personalized study schedules — so you can focus on learning, not planning.</p>
+    <div class="hero-btns">
+      <button class="btn-main" onclick="openPaywall()">Start Free Trial →</button>
+      <a href="#how" class="btn-ghost">See How It Works</a>
+    </div>
+    <div class="hero-visual">
+      <div class="dash-preview">
+        <div class="dash-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="dash-title">My Assignments — Week 3</span>
+        </div>
+        <div class="assign-list">
+          <div class="assign-item">
+            <div class="assign-dot" style="background:var(--accent2)"></div>
+            <span class="assign-name">Research Essay — History</span>
+            <span class="assign-due">Due in 2 days</span>
+            <span class="assign-tag tag-urgent">Urgent</span>
+          </div>
+          <div class="assign-item">
+            <div class="assign-dot" style="background:var(--gold)"></div>
+            <span class="assign-name">Problem Set 4 — Calculus</span>
+            <span class="assign-due">Due in 5 days</span>
+            <span class="assign-tag tag-soon">Soon</span>
+          </div>
+          <div class="assign-item">
+            <div class="assign-dot" style="background:var(--teal)"></div>
+            <span class="assign-name">Lab Report — Chemistry</span>
+            <span class="assign-due">Due in 9 days</span>
+            <span class="assign-tag tag-ok">On Track</span>
+          </div>
+          <div class="assign-item">
+            <div class="assign-dot" style="background:var(--accent)"></div>
+            <span class="assign-name">Book Review — Literature</span>
+            <span class="assign-due">Due in 12 days</span>
+            <span class="assign-tag tag-ok">On Track</span>
+          </div>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">Weekly Progress</span>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+          <span class="progress-pct">68%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="feat-header">
+    <span class="tag">Everything You Need</span>
+    <h2 class="sec-h2">Built for students who<br>mean business</h2>
+    <p class="sec-sub">One tool to plan, track, and crush every assignment.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon fi-purple">📋</div>
+      <h3>Deadline Tracking</h3>
+      <p>Add assignments in seconds. Color-coded urgency levels and due-date countdowns keep you aware of what's coming.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fi-teal">🤖</div>
+      <h3>AI Schedule Generator</h3>
+      <p>Tell Planr your available hours and it builds an optimized daily study plan — automatically balancing workload across subjects.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fi-pink">🔔</div>
+      <h3>Smart Reminders</h3>
+      <p>Get notified before crunch time hits. Planr predicts how long tasks will take and alerts you at the right moment.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fi-gold">📊</div>
+      <h3>Progress Analytics</h3>
+      <p>Visualize your productivity trends, completion rates, and study habits over time with beautiful charts.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fi-blue">📅</div>
+      <h3>Calendar Sync</h3>
+      <p>Integrates with Google Calendar and Apple Calendar so your study schedule lives where you already plan your life.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fi-green">🎯</div>
+      <h3>Subject Prioritization</h3>
+      <p>Weight assignments by grade percentage and difficulty. Planr automatically surfaces the work that matters most.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="how-inner container" style="max-width:1000px;margin:0 auto">
+    <div class="how-steps">
+      <div style="margin-bottom:2rem">
+        <span class="sec-tag">How It Works</span>
+        <h2 class="sec-h2">From chaos to clarity<br>in three steps</h2>
+        <p class="sec-sub">Planr does the heavy lifting so you can spend your energy on actual studying.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h4>Add Your Assignments</h4>
+          <p>Enter the assignment name, subject, due date, and estimated difficulty. Import from your course syllabus in one click.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h4>Set Your Availability</h4>
+          <p>Tell Planr when you're free to study each day. It respects your classes, commitments, and preferred focus hours.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h4>Get Your Study Schedule</h4>
+          <p>Planr's AI generates a full weekly plan — broken into focused sessions — ensuring nothing falls through the cracks.</p>
+        </div>
+      </div>
+    </div>
+    <div class="how-visual">
+      <div class="panel-title">Generated Schedule — This Week</div>
+      <div class="schedule-block">
+        <div class="sch-day">Monday</div>
+        <div class="sch-item"><span class="sch-time">9:00 AM</span><span class="sch-task">Research Essay — Outline & Sources</span><div class="sch-bar" style="background:var(--accent2)"></div></div>
+        <div class="sch-item"><span class="sch-time">2:00 PM</span><span class="sch-task">Calculus — Problems 1–8</span><div class="sch-bar" style="background:var(--gold)"></div></div>
+        <div class="sch-day">Tuesday</div>
+        <div class="sch-item"><span class="sch-time">10:00 AM</span><span class="sch-task">Research Essay — Draft Intro</span><div class="sch-bar" style="background:var(--accent2)"></div></div>
+        <div class="sch-item"><span class="sch-time">3:00 PM</span><span class="sch-task">Chemistry — Lab Notes Review</span><div class="sch-bar" style="background:var(--teal)"></div></div>
+        <div class="sch-day">Wednesday</div>
+        <div class="sch-item"><span class="sch-time">9:00 AM</span><span class="sch-task">Research Essay — Body Paragraphs</span><div class="sch-bar" style="background:var(--accent2)"></div></div>
+        <div class="sch-item"><span class="sch-time">1:00 PM</span><span class="sch-task">Calculus — Problems 9–15</span><div class="sch-bar" style="background:var(--gold)"></div></div>
+        <div class="sch-item"><span class="sch-time">4:00 PM</span><span class="sch-task">Literature — Chapter Reading</span><div class="sch-bar" style="background:var(--accent)"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP PREVIEW (locked) -->
+<section id="app">
+  <div class="app-wrapper">
+    <div class="app-header">
+      <h2>Your Dashboard</h2>
+    </div>
+    <div style="position:relative">
+      <div class="app-grid">
+        <div class="panel">
+          <div class="panel-title">Add Assignment</div>
+          <div class="fake-input"></div>
+          <div class="fake-input"></div>
+          <div class="fake-input"></div>
+          <div class="fake-btn"></div>
+          <div style="margin-top:1.3rem">
+            <div class="panel-title">Upcoming</div>
+            <div class="fake-list">
+              <div class="fake-item c1"></div>
+              <div class="fake-item c2"></div>
+              <div class="fake-item c3"></div>
+              <div class="fake-item c4"></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">AI Study Schedule</div>
+          <div class="fake-schedule">
+            <div class="fake-day-hdr"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-day-hdr" style="margin-top:0.5rem"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-day-hdr" style="margin-top:0.5rem"></div>
+            <div class="fake-time-item"></div>
+            <div class="fake-time-item"></div>
+          </div>
+        </div>
+      </div>
+      <div class="locked-overlay">
+        <div class="lock-msg">
+          <div class="lock-icon">🔒</div>
+          <h3>Unlock the Full Dashboard</h3>
+          <p>Subscribe to add assignments, generate AI schedules,<br>and track your progress in real time.</p>
+          <button class="btn-main" onclick="openPaywall()">Unlock Now — From $21.25/mo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="pricing-header">
+    <span class="tag">Simple Pricing</span>
+    <h2 class="sec-h2">Invest in your grades</h2>
+    <p class="sec-sub">One plan, two billing options. Cancel any time.</p>
+  </div>
+  <div class="toggle-wrap">
+    <span class="toggle-label active" id="lbl-monthly">Monthly</span>
+    <label class="toggle">
+      <input type="checkbox" id="billing-toggle" onchange="toggleBilling()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="toggle-label" id="lbl-yearly">Yearly <span class="save-badge">Save 15%</span></span>
+  </div>
+  <div class="plans-grid">
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price"><span class="price-amount">$0</span><span class="price-period">/mo</span></div>
+      <div class="price-sub">Forever free, no credit card needed</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li>Up to 3 assignments</li>
+        <li>Basic deadline tracker</li>
+        <li>Manual study planning</li>
+        <li class="no">AI schedule generation</li>
+        <li class="no">Smart reminders</li>
+        <li class="no">Progress analytics</li>
+        <li class="no">Calendar sync</li>
+      </ul>
+      <button class="btn-plan outline" onclick="openPaywall()">Get Started Free</button>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">
+        <span class="price-amount" id="pro-price">$25</span>
+        <span class="price-period" id="pro-period">/mo</span>
+      </div>
+      <div class="price-sub" id="pro-sub">Billed monthly · Cancel anytime</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li>Unlimited assignments</li>
+        <li>AI-generated study schedules</li>
+        <li>Smart deadline reminders</li>
+        <li>Progress analytics & insights</li>
+        <li>Google & Apple Calendar sync</li>
+        <li>Subject prioritization engine</li>
+        <li>Priority support</li>
+      </ul>
+      <button class="btn-plan primary" onclick="openPaywall()">Start 7-Day Free Trial →</button>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div style="text-align:center;margin-bottom:0.5rem">
+    <span class="sec-tag">Student Love</span>
+    <h2 class="sec-h2">What students are saying</h2>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="stars">★★★★★</div>
+      <blockquote>"I used to pull all-nighters because I lost track of due dates. Planr completely changed how I manage my semester. The AI schedule is scary accurate."</blockquote>
+      <div class="testi-author">
+        <div class="avatar av1">A</div>
+        <div><div class="testi-name">Aisha M.</div><div class="testi-role">3rd Year, Computer Science</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="stars">★★★★★</div>
+      <blockquote>"Worth every penny. I went from barely passing to top of my class. Having everything laid out in a daily schedule means I never feel overwhelmed."</blockquote>
+      <div class="testi-author">
+        <div class="avatar av2">D</div>
+        <div><div class="testi-name">Daniel K.</div><div class="testi-role">Pre-Med Sophomore</div></div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="stars">★★★★☆</div>
+      <blockquote>"The calendar sync saved me. I finally stopped double-booking study sessions with social plans. The yearly plan is genuinely the best deal I found this year."</blockquote>
+      <div class="testi-author">
+        <div class="avatar av3">S</div>
+        <div><div class="testi-name">Sofia R.</div><div class="testi-role">MBA Student</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="faq-inner">
+    <div style="text-align:center;margin-bottom:2.5rem">
+      <span class="sec-tag">FAQ</span>
+      <h2 class="sec-h2">Questions answered</h2>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How does the AI schedule generator work?<span class="faq-icon">+</span></div>
+      <div class="faq-a">You input your assignments, due dates, estimated effort, and availability. Planr's algorithm distributes study sessions across your free time, prioritizing high-urgency tasks while keeping workload balanced so you avoid burnout.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What's the difference between monthly and yearly?<span class="faq-icon">+</span></div>
+      <div class="faq-a">Both plans give you full Pro access. The yearly plan is $255 — that's 15% off compared to paying $25/month for 12 months ($300), saving you $45. You can cancel either plan at any time.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Is there a free trial?<span class="faq-icon">+</span></div>
+      <div class="faq-a">Yes — all new Pro subscribers get a 7-day free trial. No credit card is required to start. You're only charged if you decide to continue after the trial period ends.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Can I import my syllabus or course schedule?<span class="faq-icon">+</span></div>
+      <div class="faq-a">Pro users can upload a PDF syllabus and Planr will auto-extract assignment names and due dates using AI parsing. You can also connect your institution's LMS if supported.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How do I cancel?<span class="faq-icon">+</span></div>
+      <div class="faq-a">You can cancel anytime from your account settings. You'll keep Pro access until the end of your current billing period, then automatically revert to the free plan — no data is lost.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">Planr<span>.</span></div>
+  <p>© 2025 Planr — AI Assignment Planner. Built for students who mean business.</p>
+</footer>
+
+<!-- PAYWALL MODAL -->
+<div id="paywall-overlay">
+  <div class="paywall-modal">
+    <div class="pw-lock">🎓</div>
+    <h2>Unlock Full Access</h2>
+    <p>Join thousands of students acing their deadlines. Start your 7-day free trial — no credit card required.</p>
+    <div class="pw-plans">
+      <div class="pw-plan selected" id="pw-monthly" onclick="selectPlan('monthly')">
+        <div class="pw-plan-name">Monthly</div>
+        <div class="pw-plan-price">$25</div>
+        <div class="pw-plan-sub">per month</div>
+      </div>
+      <div class="pw-plan" id="pw-yearly" onclick="selectPlan('yearly')">
+        <div class="pw-plan-name">Yearly</div>
+        <div class="pw-plan-price">$255</div>
+        <div class="pw-plan-sub">per year</div>
+        <span class="save">Save 15% — $45 off</span>
+      </div>
+    </div>
+    <button class="btn-pw-cta" id="pw-cta-btn">Start 7-Day Free Trial →</button>
+    <button class="pw-close" onclick="closePaywall()">Maybe later</button>
+    <div class="pw-secure">🔒 Secure checkout · Cancel anytime</div>
+  </div>
+</div>
+
+<script>
+// Cursor (desktop only, controlled via CSS)
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+if(cursor && ring){
+  document.addEventListener('mousemove',e=>{
+    mx=e.clientX;my=e.clientY;
+    cursor.style.left=mx+'px';cursor.style.top=my+'px';
+  });
+  function animRing(){
+    rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(animRing);
+  }
+  animRing();
+  document.querySelectorAll('button,a,.faq-q,.pw-plan').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{cursor.style.transform='translate(-50%,-50%) scale(2)';cursor.style.background='var(--teal)'});
+    el.addEventListener('mouseleave',()=>{cursor.style.transform='translate(-50%,-50%) scale(1)';cursor.style.background='var(--accent)'});
+  });
+}
+
+// Scroll reveal
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}});
+},{threshold:0.08});
+document.querySelectorAll('.feat-card,.how-step,.plan-card,.testi-card,.faq-item').forEach(el=>{
+  el.style.cssText+='opacity:0;transform:translateY(20px);transition:opacity 0.5s ease,transform 0.5s ease,border-color 0.25s,box-shadow 0.25s';
+  obs.observe(el);
+});
+
+// Billing toggle
+function toggleBilling(){
+  const yearly=document.getElementById('billing-toggle').checked;
+  document.getElementById('pro-price').textContent=yearly?'$255':'$25';
+  document.getElementById('pro-period').textContent=yearly?'/yr':'/mo';
+  document.getElementById('pro-sub').textContent=yearly?'Billed yearly · Save 15% ($45 off) · Cancel anytime':'Billed monthly · Cancel anytime';
+  document.getElementById('lbl-monthly').classList.toggle('active',!yearly);
+  document.getElementById('lbl-yearly').classList.toggle('active',yearly);
+}
+
+// FAQ
+function toggleFaq(el){
+  const item=el.parentElement;
+  document.querySelectorAll('.faq-item').forEach(i=>{if(i!==item)i.classList.remove('open')});
+  item.classList.toggle('open');
+}
+
+// Paywall
+let selectedPlan='monthly';
+function openPaywall(){document.getElementById('paywall-overlay').classList.add('show');document.body.style.overflow='hidden'}
+function closePaywall(){document.getElementById('paywall-overlay').classList.remove('show');document.body.style.overflow=''}
+function selectPlan(p){
+  selectedPlan=p;
+  document.getElementById('pw-monthly').classList.toggle('selected',p==='monthly');
+  document.getElementById('pw-yearly').classList.toggle('selected',p==='yearly');
+  document.getElementById('pw-cta-btn').textContent=p==='yearly'?'Start Free Trial — $255/yr (Save 15%) →':'Start 7-Day Free Trial →';
+}
+document.getElementById('paywall-overlay').addEventListener('click',function(e){
+  if(e.target===this)closePaywall();
+});
+
+// Mobile menu
+function toggleMenu(){
+  const menu=document.getElementById('mobile-menu');
+  const hamburger=document.getElementById('hamburger');
+  const isOpen=menu.classList.toggle('open');
+  hamburger.classList.toggle('open',isOpen);
+  document.body.style.overflow=isOpen?'hidden':'';
+}
+
+// Close mobile menu on nav link click (hash links)
+document.querySelectorAll('.mobile-menu a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',()=>{
+    document.getElementById('mobile-menu').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow='';
+  });
+});
+</script>
+</body>
+</html>
